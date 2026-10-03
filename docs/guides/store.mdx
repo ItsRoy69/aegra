@@ -262,7 +262,6 @@ await client.store.put_item(
 </Note>
 
 Qualifying the namespace doesn't weaken the [isolation](#namespace-scoping): under the default per-user scope, Bob's requests are buried under `["users", "bob", ...]`, so he never sees Alice's items. In a configured scope, access is instead bounded by the matching attribute values, and sharing occurs only between users with the same values.
-```
 
 <Note>
   With a [configured scope](#configurable-scoping), qualify with that scope's prefix and your own attribute values instead — `("orgs", <your org_id>, "filesystem")` for a `"orgs": ["org_id"]` scope. Scopes are opt-in, so an unqualified namespace never resolves to one: it always falls back to per-user scope.

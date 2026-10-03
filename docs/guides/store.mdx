@@ -227,33 +227,22 @@ Add the node to your graph as usual — LangGraph injects the `store` parameter 
 
 A `StoreBackend` namespace must be fully qualified for its scope: the REST API buries anything not already headed by `["users", <identity>]` for the default per-user scope, or by a configured `store.scopes` prefix followed by the matching attribute values (see [namespace scoping](#namespace-scoping)).
 
-The first failure mode is Deep Agents' documented `rt.server_info.user.identity` path. On Aegra `server_info` is `None`, so that path raises `AttributeError` before any write. Use a [factory graph](/reference/configuration#factory-graphs) and `runtime.user` instead, which is `None` during introspection:
-
 ```python
 from deepagents import create_deep_agent
 from deepagents.backends import CompositeBackend, StateBackend, StoreBackend
-from langgraph_sdk.runtime import ServerRuntime
 
-
-async def graph(runtime: ServerRuntime):
-    """Factory graph."""
-    user = runtime.user  # None during Aegra introspection
-    identity = user.identity if user else "anonymous"
-
-    return create_deep_agent(
-        model=model,
-        backend=CompositeBackend(
-            default=StateBackend(),
-            routes={
-                "/memories/": StoreBackend(
-                    namespace=lambda rt: ("users", identity, "filesystem")
-                )
-            },
-        ),
-    )
+graph = create_deep_agent(
+    model=model,
+    backend=CompositeBackend(
+        default=StateBackend(),
+        routes={
+            "/memories/": StoreBackend(
+                namespace=lambda rt: ("users", rt.server_info.user.identity, "filesystem")
+            )
+        },
+    ),
+)
 ```
-
-Separately, in the pure namespace-mismatch case, an authenticated factory graph correctly resolves `runtime.user.identity` but returns the unqualified `("<identity>", "filesystem")`. The backend writes the item under `<identity>.filesystem`, but that namespace is outside the authenticated user's REST-scoped namespace, so REST cannot see it.
 
 `("users", <identity>, ...)` passes through default per-user scoping unchanged, so `client.store.*` addresses the same rows. For a configured scope, use that scope's prefix and matching attribute values instead. Keys are paths inside the routed directory (`/memories/` is stripped) and values use the backend's file shape:
 
@@ -266,6 +255,13 @@ await client.store.put_item(
     "/pref.txt",
     {"content": "Answer concisely.", "encoding": "utf-8"},
 )
+```
+
+<Note>
+  With a [configured scope](#configurable-scoping), qualify with that scope's prefix and your own attribute values instead — `("orgs", <your org_id>, "filesystem")` for a `"orgs": ["org_id"]` scope. Scopes are opt-in, so an unqualified namespace never resolves to one: it always falls back to per-user scope.
+</Note>
+
+Qualifying the namespace doesn't weaken the [isolation](#namespace-scoping): under the default per-user scope, Bob's requests are buried under `["users", "bob", ...]`, so he never sees Alice's items. In a configured scope, access is instead bounded by the matching attribute values, and sharing occurs only between users with the same values.
 ```
 
 <Note>

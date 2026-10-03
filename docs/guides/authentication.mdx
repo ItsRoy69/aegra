@@ -315,7 +315,7 @@ user["team_id"]        # "team42" (custom field, dict-style access)
 user.to_dict()         # full dict including all custom fields
 ```
 
-Building a store namespace from `user.identity`? Qualify it with `"users"` or it's unreachable over REST. See [Deep Agents and StoreBackend](/guides/store#deep-agents-and-storebackend).
+Building a store namespace from `user.identity`? Qualify it under `"users"` for the default per-user scope, or use a configured scope's prefix and matching attribute values. See [Deep Agents and StoreBackend](/guides/store#deep-agents-and-storebackend).
 
 <Note>
   Factory graphs get user data in **two places**:
